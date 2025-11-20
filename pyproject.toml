@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "django-softdelete-cascade"
+version = "0.1.0"
+description = "Django library for soft delete with cascade support"
+readme = "README.md"
+authors = [
+    {name = "Django SoftDelete Cascade Contributors", email = "noreply@example.com"}
+]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: Django",
+    "Framework :: Django :: 3.2",
+    "Framework :: Django :: 4.0",
+    "Framework :: Django :: 4.1",
+    "Framework :: Django :: 4.2",
+    "Framework :: Django :: 5.0",
+]
+keywords = ["django", "soft-delete", "cascade", "orm", "database"]
+requires-python = ">=3.10"
+dependencies = [
+    "Django>=3.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-django>=4.5",
+    "pytest-cov>=4.0",
+    "factory-boy>=3.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/django-softdelete-cascade"
+Repository = "https://github.com/yourusername/django-softdelete-cascade"
+
+[tool.setuptools]
+packages = ["softdelete"]
+
+[tool.pytest.ini_options]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+testpaths = ["tests"]
+addopts = "-v"

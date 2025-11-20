@@ -1,0 +1,22 @@
+# Development dependencies for django-softdelete-cascade
+
+# Core dependencies
+Django>=3.2
+
+# Testing
+pytest>=7.0
+pytest-django>=4.5
+pytest-cov>=4.0
+factory-boy>=3.2
+
+# Code quality
+black>=23.0
+flake8>=6.0
+mypy>=1.0
+django-stubs>=4.2
+isort>=5.12
+
+# Build and packaging
+build>=0.10
+twine>=4.0
+wheel>=0.40

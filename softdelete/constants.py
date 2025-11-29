@@ -16,3 +16,6 @@ ROW_STATUS_CHOICES = [
 
 # Chunk size for queryset iterators while walking cascades.
 DELETE_ITERATOR_CHUNK_SIZE = 500
+
+# Logger name for soft-delete operations.
+SOFTDELETE_LOGGER_NAME = 'softdelete'

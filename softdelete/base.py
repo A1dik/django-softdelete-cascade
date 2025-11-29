@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
@@ -14,8 +15,11 @@ from .constants import (
     DELETE_ITERATOR_CHUNK_SIZE,
     ROW_STATUS_ACTIVE,
     ROW_STATUS_DELETE,
+    SOFTDELETE_LOGGER_NAME,
 )
 from .utils import deduplicate_objects, format_blocking_info
+
+logger = logging.getLogger(SOFTDELETE_LOGGER_NAME)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -64,14 +68,29 @@ class SoftDeleteModel(models.Model):
         if using is None:
             using = router.db_for_write(self.__class__, instance=self)
 
+        model_label = f'{self._meta.app_label}.{self._meta.object_name}'
+        logger.debug(
+            'Starting soft-delete for %s (pk=%s)',
+            model_label,
+            self.pk,
+        )
+
         # Short-circuit when the instance was previously soft-deleted.
         if hasattr(self, 'row_status') and self.row_status == ROW_STATUS_DELETE:
+            logger.debug(
+                'Skipping soft-delete for %s (pk=%s) - already deleted',
+                model_label,
+                self.pk,
+            )
             return 0, {}
 
         deleted_counter = 0
         deleted_models: dict[str, int] = {}
 
         with transaction.atomic(using=using):
+            # Lock the root object to prevent concurrent modifications.
+            type(self).objects.using(using).filter(pk=self.pk).select_for_update(nowait=False).first()
+
             # Track model -> primary key set for every object to soft-delete.
             to_delete: dict[type[models.Model], set[Any]] = defaultdict(set)
             to_delete[type(self)].add(self.pk)
@@ -149,6 +168,14 @@ class SoftDeleteModel(models.Model):
                 deleted_counter += updated_count
                 model_label = f'{model._meta.app_label}.{model._meta.object_name}'
                 deleted_models[model_label] = updated_count
+
+        logger.info(
+            'Completed soft-delete for %s (pk=%s): %d object(s) affected across %d model(s)',
+            f'{self._meta.app_label}.{self._meta.object_name}',
+            self.pk,
+            deleted_counter,
+            len(deleted_models),
+        )
 
         return deleted_counter, deleted_models
 

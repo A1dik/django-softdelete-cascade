@@ -26,9 +26,10 @@ from .constants import (
     ROW_STATUS_CHOICES,
     ROW_STATUS_DELETE,
     ROW_STATUS_UPDATED,
+    SOFTDELETE_LOGGER_NAME,
 )
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 __all__ = [
     'SoftDeleteModel',
@@ -38,4 +39,5 @@ __all__ = [
     'ROW_STATUS_BANNED',
     'ROW_STATUS_CHOICES',
     'DELETE_ITERATOR_CHUNK_SIZE',
+    'SOFTDELETE_LOGGER_NAME',
 ]

@@ -2,18 +2,13 @@
 
 from django.db import models
 
-from softdelete import ROW_STATUS_ACTIVE, ROW_STATUS_CHOICES, SoftDeleteModel
+from softdelete import SoftDeleteModel
 
 
 class Author(SoftDeleteModel):
     """Author model."""
 
     name = models.CharField(max_length=255)
-    row_status = models.SmallIntegerField(
-        choices=ROW_STATUS_CHOICES, default=ROW_STATUS_ACTIVE
-    )
-    create_date = models.DateTimeField(auto_now_add=True)
-    update_date = models.DateTimeField(auto_now=True)
 
     class Meta:
         app_label = 'tests'
@@ -29,11 +24,6 @@ class Book(SoftDeleteModel):
     author = models.ForeignKey(
         Author, on_delete=models.CASCADE, related_name='books'
     )
-    row_status = models.SmallIntegerField(
-        choices=ROW_STATUS_CHOICES, default=ROW_STATUS_ACTIVE
-    )
-    create_date = models.DateTimeField(auto_now_add=True)
-    update_date = models.DateTimeField(auto_now=True)
 
     class Meta:
         app_label = 'tests'
@@ -49,11 +39,6 @@ class Chapter(SoftDeleteModel):
     book = models.ForeignKey(
         Book, on_delete=models.CASCADE, related_name='chapters'
     )
-    row_status = models.SmallIntegerField(
-        choices=ROW_STATUS_CHOICES, default=ROW_STATUS_ACTIVE
-    )
-    create_date = models.DateTimeField(auto_now_add=True)
-    update_date = models.DateTimeField(auto_now=True)
 
     class Meta:
         app_label = 'tests'
@@ -69,11 +54,6 @@ class Page(SoftDeleteModel):
     chapter = models.ForeignKey(
         Chapter, on_delete=models.CASCADE, related_name='pages'
     )
-    row_status = models.SmallIntegerField(
-        choices=ROW_STATUS_CHOICES, default=ROW_STATUS_ACTIVE
-    )
-    create_date = models.DateTimeField(auto_now_add=True)
-    update_date = models.DateTimeField(auto_now=True)
 
     class Meta:
         app_label = 'tests'
@@ -86,11 +66,6 @@ class Publisher(SoftDeleteModel):
     """Publisher protected by PROTECT relations."""
 
     name = models.CharField(max_length=255)
-    row_status = models.SmallIntegerField(
-        choices=ROW_STATUS_CHOICES, default=ROW_STATUS_ACTIVE
-    )
-    create_date = models.DateTimeField(auto_now_add=True)
-    update_date = models.DateTimeField(auto_now=True)
 
     class Meta:
         app_label = 'tests'
@@ -106,11 +81,6 @@ class ProtectedBook(SoftDeleteModel):
     publisher = models.ForeignKey(
         Publisher, on_delete=models.PROTECT, related_name='protected_books'
     )
-    row_status = models.SmallIntegerField(
-        choices=ROW_STATUS_CHOICES, default=ROW_STATUS_ACTIVE
-    )
-    create_date = models.DateTimeField(auto_now_add=True)
-    update_date = models.DateTimeField(auto_now=True)
 
     class Meta:
         app_label = 'tests'
@@ -123,11 +93,6 @@ class Category(SoftDeleteModel):
     """Category guarded by RESTRICT relations."""
 
     name = models.CharField(max_length=255)
-    row_status = models.SmallIntegerField(
-        choices=ROW_STATUS_CHOICES, default=ROW_STATUS_ACTIVE
-    )
-    create_date = models.DateTimeField(auto_now_add=True)
-    update_date = models.DateTimeField(auto_now=True)
 
     class Meta:
         app_label = 'tests'
@@ -143,11 +108,6 @@ class RestrictedBook(SoftDeleteModel):
     category = models.ForeignKey(
         Category, on_delete=models.RESTRICT, related_name='restricted_books'
     )
-    row_status = models.SmallIntegerField(
-        choices=ROW_STATUS_CHOICES, default=ROW_STATUS_ACTIVE
-    )
-    create_date = models.DateTimeField(auto_now_add=True)
-    update_date = models.DateTimeField(auto_now=True)
 
     class Meta:
         app_label = 'tests'
@@ -164,11 +124,6 @@ class Place(SoftDeleteModel):
 
     name = models.CharField(max_length=255)
     address = models.CharField(max_length=255)
-    row_status = models.SmallIntegerField(
-        choices=ROW_STATUS_CHOICES, default=ROW_STATUS_ACTIVE
-    )
-    create_date = models.DateTimeField(auto_now_add=True)
-    update_date = models.DateTimeField(auto_now=True)
 
     class Meta:
         app_label = 'tests'
@@ -197,11 +152,6 @@ class Waiter(SoftDeleteModel):
     restaurant = models.ForeignKey(
         Restaurant, on_delete=models.CASCADE, related_name='waiters'
     )
-    row_status = models.SmallIntegerField(
-        choices=ROW_STATUS_CHOICES, default=ROW_STATUS_ACTIVE
-    )
-    create_date = models.DateTimeField(auto_now_add=True)
-    update_date = models.DateTimeField(auto_now=True)
 
     class Meta:
         app_label = 'tests'

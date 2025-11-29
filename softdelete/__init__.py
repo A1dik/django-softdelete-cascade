@@ -18,7 +18,7 @@ Simple usage::
     product.delete()  # marks the row as deleted and cascades to dependents
 """
 
-from .base import SoftDeleteModel
+from .base import SoftDeleteManager, SoftDeleteModel, SoftDeleteQuerySet
 from .constants import (
     DELETE_ITERATOR_CHUNK_SIZE,
     ROW_STATUS_ACTIVE,
@@ -29,10 +29,12 @@ from .constants import (
     SOFTDELETE_LOGGER_NAME,
 )
 
-__version__ = '0.1.1'
+__version__ = '0.2.0'
 
 __all__ = [
     'SoftDeleteModel',
+    'SoftDeleteManager',
+    'SoftDeleteQuerySet',
     'ROW_STATUS_ACTIVE',
     'ROW_STATUS_UPDATED',
     'ROW_STATUS_DELETE',

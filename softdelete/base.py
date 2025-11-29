@@ -14,6 +14,7 @@ from django.utils import timezone
 from .constants import (
     DELETE_ITERATOR_CHUNK_SIZE,
     ROW_STATUS_ACTIVE,
+    ROW_STATUS_CHOICES,
     ROW_STATUS_DELETE,
     SOFTDELETE_LOGGER_NAME,
 )
@@ -25,17 +26,131 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
+class SoftDeleteQuerySet(models.QuerySet):
+    """Custom QuerySet with soft-delete filtering and operations.
+
+    Provides convenient methods for working with soft-deleted objects:
+        * .alive() - filter only active objects
+        * .deleted() - filter only soft-deleted objects
+        * .soft_delete() - soft delete all objects in the queryset
+        * .restore() - restore soft-deleted objects (stub for Stage 3)
+    """
+
+    def alive(self) -> models.QuerySet:
+        """Return only active (non-deleted) objects.
+
+        Returns:
+            QuerySet filtered to row_status=ROW_STATUS_ACTIVE.
+        """
+        return self.filter(row_status=ROW_STATUS_ACTIVE)
+
+    def deleted(self) -> models.QuerySet:
+        """Return only soft-deleted objects.
+
+        Returns:
+            QuerySet filtered to row_status=ROW_STATUS_DELETE.
+        """
+        return self.filter(row_status=ROW_STATUS_DELETE)
+
+    def soft_delete(self) -> tuple[int, dict[str, int]]:
+        """Soft-delete all objects in the queryset.
+
+        Iterates through the queryset and calls delete() on each object,
+        which triggers the cascade soft-delete logic.
+
+        Returns:
+            tuple[int, dict[str, int]]: Total deleted count and per-model breakdown.
+        """
+        total_deleted = 0
+        deleted_models: dict[str, int] = {}
+
+        for obj in self.iterator(chunk_size=DELETE_ITERATOR_CHUNK_SIZE):
+            count, models_dict = obj.delete()
+            total_deleted += count
+
+            # Merge per-model counts.
+            for model_label, model_count in models_dict.items():
+                deleted_models[model_label] = deleted_models.get(model_label, 0) + model_count
+
+        return total_deleted, deleted_models
+
+    def restore(self) -> None:
+        """Restore soft-deleted objects (stub for Stage 3).
+
+        Raises:
+            NotImplementedError: Will be implemented in Stage 3.
+        """
+        raise NotImplementedError('restore() will be implemented in Stage 3')
+
+
+class SoftDeleteManager(models.Manager):
+    """Custom Manager that filters out soft-deleted objects by default.
+
+    Default queryset behavior:
+        * Model.objects.all() - returns only active objects
+        * Model.objects.filter(...) - operates on active objects
+
+    Additional methods:
+        * .all_with_deleted() - include both active and deleted objects
+        * .deleted_only() - return only deleted objects
+    """
+
+    def get_queryset(self) -> models.QuerySet:
+        """Return queryset filtered to active objects by default.
+
+        Returns:
+            SoftDeleteQuerySet filtered to row_status=ROW_STATUS_ACTIVE.
+        """
+        return SoftDeleteQuerySet(self.model, using=self._db).alive()
+
+    def all_with_deleted(self) -> models.QuerySet:
+        """Return all objects including soft-deleted ones.
+
+        Returns:
+            SoftDeleteQuerySet without any row_status filtering.
+        """
+        return SoftDeleteQuerySet(self.model, using=self._db)
+
+    def deleted_only(self) -> models.QuerySet:
+        """Return only soft-deleted objects.
+
+        Returns:
+            SoftDeleteQuerySet filtered to row_status=ROW_STATUS_DELETE.
+        """
+        return SoftDeleteQuerySet(self.model, using=self._db).deleted()
+
+
 class SoftDeleteModel(models.Model):
     """Abstract base class that implements BFS-driven soft deletes.
 
     Key capabilities:
-        * tracks state via a ``row_status`` column
+        * tracks state via a built-in ``row_status`` column
         * traverses ``on_delete=CASCADE`` relations to mark dependents
         * inspects PROTECT/RESTRICT relations before updating rows
         * handles multi-table inheritance hierarchies
         * performs all updates inside a single atomic transaction
         * coalesces updates into bulk ``UPDATE`` statements per model
+        * provides smart managers that filter deleted objects by default
+
+    Managers:
+        * objects - default manager, filters to active objects
+        * all_objects - returns all objects including deleted ones
     """
+
+    row_status = models.SmallIntegerField(
+        choices=ROW_STATUS_CHOICES,
+        default=ROW_STATUS_ACTIVE,
+        db_index=True,
+        help_text='Object lifecycle status (0=Active, 1=Updated, 2=Deleted, 3=Banned)',
+    )
+    create_date = models.DateTimeField(auto_now_add=True)
+    update_date = models.DateTimeField(auto_now=True)
+
+    # Default manager filters out deleted objects.
+    objects = SoftDeleteManager()
+
+    # Manager that includes deleted objects.
+    all_objects = SoftDeleteQuerySet.as_manager()
 
     class Meta:
         """Mark the base model as abstract."""
@@ -89,7 +204,7 @@ class SoftDeleteModel(models.Model):
 
         with transaction.atomic(using=using):
             # Lock the root object to prevent concurrent modifications.
-            type(self).objects.using(using).filter(pk=self.pk).select_for_update(nowait=False).first()
+            type(self).all_objects.using(using).filter(pk=self.pk).select_for_update(nowait=False).first()
 
             # Track model -> primary key set for every object to soft-delete.
             to_delete: dict[type[models.Model], set[Any]] = defaultdict(set)
@@ -157,7 +272,7 @@ class SoftDeleteModel(models.Model):
                     continue
 
                 updated_count = (
-                    model.objects.using(using)
+                    model.all_objects.using(using)
                     .filter(pk__in=pks)
                     .update(
                         row_status=ROW_STATUS_DELETE,
@@ -210,7 +325,7 @@ class SoftDeleteModel(models.Model):
             if related_object.on_delete == PROTECT:
                 if hasattr(related_model, 'row_status'):
                     blocking_queryset = (
-                        related_model.objects.using(using)
+                        related_model.all_objects.using(using)
                         .filter(
                             **{f'{field_name}__in': objects},
                             row_status=ROW_STATUS_ACTIVE,
@@ -219,7 +334,7 @@ class SoftDeleteModel(models.Model):
                     )
                 else:
                     blocking_queryset = (
-                        related_model.objects.using(using)
+                        related_model.all_objects.using(using)
                         .filter(
                             **{f'{field_name}__in': objects},
                         )
@@ -238,7 +353,7 @@ class SoftDeleteModel(models.Model):
             elif related_object.on_delete == RESTRICT:
                 if hasattr(related_model, 'row_status'):
                     blocking_queryset = (
-                        related_model.objects.using(using)
+                        related_model.all_objects.using(using)
                         .filter(
                             **{f'{field_name}__in': objects},
                             row_status=ROW_STATUS_ACTIVE,
@@ -247,7 +362,7 @@ class SoftDeleteModel(models.Model):
                     )
                 else:
                     blocking_queryset = (
-                        related_model.objects.using(using)
+                        related_model.all_objects.using(using)
                         .filter(
                             **{f'{field_name}__in': objects},
                         )
@@ -317,12 +432,3 @@ class SoftDeleteModel(models.Model):
                     if obj_key not in processed:
                         to_delete[parent_model].add(parent_instance.pk)
                         next_level.append(parent_instance)
-
-    @classmethod
-    def get_active(cls) -> models.QuerySet:
-        """Return a queryset of active (non-deleted) rows.
-
-        Returns:
-            QuerySet filtered down to ``row_status=ROW_STATUS_ACTIVE``.
-        """
-        return cls.objects.filter(row_status=ROW_STATUS_ACTIVE)

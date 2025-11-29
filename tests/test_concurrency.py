@@ -109,13 +109,17 @@ class TestConcurrencySafety:
         assert author.row_status == ROW_STATUS_DELETE
 
         for book_pk in book_pks:
-            book = Book.objects.get(pk=book_pk)
+            book = Book.all_objects.get(pk=book_pk)
             assert book.row_status == ROW_STATUS_DELETE
 
-        # Verify they still exist in database (soft delete)
-        assert Author.objects.filter(pk=author.pk).exists()
+        # Verify they still exist in database (soft delete) using all_objects
+        assert Author.all_objects.filter(pk=author.pk).exists()
         for book_pk in book_pks:
-            assert Book.objects.filter(pk=book_pk).exists()
+            assert Book.all_objects.filter(pk=book_pk).exists()
+
+        # But not visible via default manager
+        assert not Author.objects.filter(pk=author.pk).exists()
+        assert Book.objects.count() == 0
 
     def test_delete_uses_transaction_atomicity(self):
         """Verify that delete operations maintain atomicity.

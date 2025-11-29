@@ -31,7 +31,7 @@ class TestMultiTableInheritance:
 
         # Ensure both objects are marked as deleted
         restaurant.refresh_from_db()
-        place = Place.objects.get(pk=place_pk)
+        place = Place.all_objects.get(pk=place_pk)
 
         assert restaurant.row_status == ROW_STATUS_DELETE
         assert place.row_status == ROW_STATUS_DELETE
@@ -55,7 +55,7 @@ class TestMultiTableInheritance:
 
         # Check all objects
         restaurant.refresh_from_db()
-        place = Place.objects.get(pk=place_pk)
+        place = Place.all_objects.get(pk=place_pk)
         waiter1.refresh_from_db()
         waiter2.refresh_from_db()
 
@@ -75,7 +75,7 @@ class TestMultiTableInheritance:
         # Verify deletion status
         assert deleted_count == 2
         restaurant.refresh_from_db()
-        place = Place.objects.get(pk=place_pk)
+        place = Place.all_objects.get(pk=place_pk)
 
         assert restaurant.row_status == ROW_STATUS_DELETE
         assert place.row_status == ROW_STATUS_DELETE
@@ -131,7 +131,7 @@ class TestMultiTableInheritance:
 
         # All objects should be marked as deleted
         restaurant.refresh_from_db()
-        place = Place.objects.get(pk=place_pk)
+        place = Place.all_objects.get(pk=place_pk)
 
         assert restaurant.row_status == ROW_STATUS_DELETE
         assert place.row_status == ROW_STATUS_DELETE
@@ -146,7 +146,7 @@ class TestMultiTableInheritance:
         restaurant = RestaurantFactory()
         place_pk = restaurant.place_ptr_id
 
-        # Get the parent object
+        # Get the parent object (use objects since it's not deleted yet)
         place = Place.objects.get(pk=place_pk)
 
         # Delete the parent directly

@@ -33,11 +33,13 @@ class TestBasicSoftDelete:
         author.refresh_from_db()
         assert author.row_status == ROW_STATUS_DELETE
 
-        # Row still exists in the database
-        assert Author.objects.filter(pk=author_pk).exists()
+        # Row still exists in the database (use all_objects to see deleted objects)
+        assert Author.all_objects.filter(pk=author_pk).exists()
+        # But not visible via default manager
+        assert not Author.objects.filter(pk=author_pk).exists()
 
-    def test_get_active_method(self):
-        """get_active returns only active instances."""
+    def test_objects_manager_filters_deleted(self):
+        """objects manager returns only active instances."""
         # Create several authors
         author1 = AuthorFactory()
         author2 = AuthorFactory()
@@ -46,8 +48,8 @@ class TestBasicSoftDelete:
         # Delete one of them
         author2.delete()
 
-        # get_active should exclude the deleted author
-        active_authors = Author.get_active()
+        # objects manager should exclude the deleted author
+        active_authors = Author.objects.all()
         assert active_authors.count() == 2
         assert author1 in active_authors
         assert author2 not in active_authors
@@ -94,8 +96,8 @@ class TestBasicSoftDelete:
         author3.delete()
 
         # All should now be marked as deleted
-        assert Author.objects.filter(row_status=ROW_STATUS_DELETE).count() == 3
-        assert Author.get_active().count() == 0
+        assert Author.all_objects.filter(row_status=ROW_STATUS_DELETE).count() == 3
+        assert Author.objects.count() == 0
 
     def test_already_deleted_object(self):
         """Deleting an already deleted object should be idempotent."""

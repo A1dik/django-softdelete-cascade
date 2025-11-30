@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, Any, Iterator
 
 from django.db import models, router, transaction
 from django.db.models import CASCADE, PROTECT, RESTRICT
@@ -18,12 +19,26 @@ from .constants import (
     ROW_STATUS_DELETE,
     SOFTDELETE_LOGGER_NAME,
 )
+from .result import SoftDeleteRef, SoftDeleteResult
 from .utils import deduplicate_objects, format_blocking_info
 
 logger = logging.getLogger(SOFTDELETE_LOGGER_NAME)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+
+
+@contextmanager
+def _no_op_context() -> Iterator[None]:
+    """No-operation context manager for dry-run mode.
+
+    Provides a context manager that does nothing, used as a replacement
+    for transaction.atomic() when dry_run=True.
+
+    Yields:
+        None
+    """
+    yield
 
 
 class SoftDeleteQuerySet(models.QuerySet):
@@ -177,8 +192,11 @@ class SoftDeleteModel(models.Model):
         abstract = True
 
     def delete(
-        self, using: str | None = None, keep_parents: bool = False
-    ) -> tuple[int, dict[str, int]]:
+        self,
+        using: str | None = None,
+        keep_parents: bool = False,
+        dry_run: bool = False,
+    ) -> tuple[int, dict[str, int]] | SoftDeleteResult:
         """Soft-delete the instance and all CASCADE-related objects.
 
         The algorithm walks the relationship graph breadth-first, ensuring every
@@ -190,21 +208,26 @@ class SoftDeleteModel(models.Model):
             using: Database alias to operate on; defaults to Django's router.
             keep_parents: Skip soft-deleting parent models in multi-table
                 inheritance hierarchies when True.
+            dry_run: When True, perform a read-only preview without database
+                modifications. Returns SoftDeleteResult instead of tuple.
 
         Returns:
             tuple[int, dict[str, int]]: Total number of updated rows and a map
-            of model labels to the number of affected rows.
+            of model labels to the number of affected rows (when dry_run=False).
+            SoftDeleteResult: Detailed preview of the operation (when dry_run=True).
 
         Raises:
-            ProtectedError: A PROTECT relation blocked deletion.
-            RestrictedError: A RESTRICT relation blocked deletion.
+            ProtectedError: A PROTECT relation blocked deletion (when dry_run=False).
+            RestrictedError: A RESTRICT relation blocked deletion (when dry_run=False).
         """
         if using is None:
             using = router.db_for_write(self.__class__, instance=self)
 
         model_label = f'{self._meta.app_label}.{self._meta.object_name}'
+        operation_mode = 'dry-run' if dry_run else 'soft-delete'
         logger.debug(
-            'Starting soft-delete for %s (pk=%s)',
+            'Starting %s for %s (pk=%s)',
+            operation_mode,
             model_label,
             self.pk,
         )
@@ -212,18 +235,35 @@ class SoftDeleteModel(models.Model):
         # Short-circuit when the instance was previously soft-deleted.
         if hasattr(self, 'row_status') and self.row_status == ROW_STATUS_DELETE:
             logger.debug(
-                'Skipping soft-delete for %s (pk=%s) - already deleted',
+                'Skipping %s for %s (pk=%s) - already deleted',
+                operation_mode,
                 model_label,
                 self.pk,
             )
+            if dry_run:
+                return SoftDeleteResult(
+                    affected_objects=tuple(),
+                    blocked_objects=tuple(),
+                    would_succeed=True,
+                    total_count=0,
+                    model_counts={},
+                )
             return 0, {}
 
+        # Collect affected objects and blocking constraints.
+        affected_refs: list[SoftDeleteRef] = []
+        blocked_refs: list[SoftDeleteRef] = []
         deleted_counter = 0
         deleted_models: dict[str, int] = {}
 
-        with transaction.atomic(using=using):
-            # Lock the root object to prevent concurrent modifications.
-            type(self).all_objects.using(using).filter(pk=self.pk).select_for_update(nowait=False).first()
+        # Define transaction context - use atomic only when not in dry_run.
+        # In dry_run mode, we still want to read from DB but not lock or modify.
+        transaction_context = transaction.atomic(using=using) if not dry_run else _no_op_context()
+
+        with transaction_context:
+            # Lock the root object to prevent concurrent modifications (only in real mode).
+            if not dry_run:
+                type(self).all_objects.using(using).filter(pk=self.pk).select_for_update(nowait=False).first()
 
             # Track model -> primary key set for every object to soft-delete.
             to_delete: dict[type[models.Model], set[Any]] = defaultdict(set)
@@ -234,6 +274,9 @@ class SoftDeleteModel(models.Model):
 
             # Seed the BFS queue with the current object.
             current_level: list[models.Model] = [self]
+
+            # Track if operation would be blocked by PROTECT/RESTRICT.
+            would_succeed = True
 
             while current_level:
                 next_level: list[models.Model] = []
@@ -247,8 +290,16 @@ class SoftDeleteModel(models.Model):
                         objects_by_model[type(obj)].append(obj)
 
                 for current_model, objects in objects_by_model.items():
-                    # Fail fast if PROTECT or RESTRICT constraints block delete.
-                    self._check_protected_relations(current_model, objects, using)
+                    # Check PROTECT/RESTRICT constraints.
+                    # In dry_run mode, catch exceptions and collect blocking objects.
+                    if dry_run:
+                        blocking_objects = self._collect_blocking_objects(current_model, objects, using)
+                        if blocking_objects:
+                            would_succeed = False
+                            blocked_refs.extend([SoftDeleteRef.from_instance(obj) for obj in blocking_objects])
+                    else:
+                        # In real mode, raise exceptions immediately.
+                        self._check_protected_relations(current_model, objects, using)
 
                     # Optionally push parent models from multi-table inheritance.
                     if not keep_parents:
@@ -285,7 +336,24 @@ class SoftDeleteModel(models.Model):
 
                 current_level = next_level
 
-            # Apply bulk updates grouped by model once traversal ends.
+            # In dry_run mode, collect affected object references.
+            if dry_run:
+                for model, pks in to_delete.items():
+                    if not pks:
+                        continue
+
+                    # Fetch actual instances to create refs.
+                    instances = model.all_objects.using(using).filter(pk__in=pks)
+                    for instance in instances.iterator(chunk_size=DELETE_ITERATOR_CHUNK_SIZE):
+                        affected_refs.append(SoftDeleteRef.from_instance(instance))
+
+                return SoftDeleteResult(
+                    affected_objects=tuple(affected_refs),
+                    blocked_objects=tuple(blocked_refs),
+                    would_succeed=would_succeed,
+                )
+
+            # Apply bulk updates grouped by model once traversal ends (real mode only).
             for model, pks in to_delete.items():
                 if not pks:
                     continue
@@ -304,7 +372,8 @@ class SoftDeleteModel(models.Model):
                 deleted_models[model_label] = updated_count
 
         logger.info(
-            'Completed soft-delete for %s (pk=%s): %d object(s) affected across %d model(s)',
+            'Completed %s for %s (pk=%s): %d object(s) affected across %d model(s)',
+            operation_mode,
             f'{self._meta.app_label}.{self._meta.object_name}',
             self.pk,
             deleted_counter,
@@ -312,6 +381,59 @@ class SoftDeleteModel(models.Model):
         )
 
         return deleted_counter, deleted_models
+
+    def _collect_blocking_objects(
+        self,
+        current_model: type[models.Model],
+        objects: list[models.Model],
+        using: str,
+    ) -> list[models.Model]:
+        """Collect objects that would block deletion via PROTECT/RESTRICT constraints.
+
+        Similar to _check_protected_relations, but returns blocking objects
+        instead of raising exceptions. Used in dry_run mode.
+
+        Args:
+            current_model: Model being processed during the current BFS step.
+            objects: Instances scheduled for deletion on the model.
+            using: Database alias for queryset execution.
+
+        Returns:
+            List of model instances that would block the deletion.
+        """
+        blocking_objects: list[models.Model] = []
+
+        related_objects_list = getattr(current_model._meta, 'related_objects', [])
+        for related_object in related_objects_list:
+            # Only check PROTECT and RESTRICT relations.
+            if related_object.on_delete not in (PROTECT, RESTRICT):
+                continue
+
+            field_name = related_object.field.name
+            related_model: type[models.Model] = related_object.related_model
+
+            # Build queryset for blocking objects.
+            if hasattr(related_model, 'row_status'):
+                blocking_queryset = (
+                    related_model.all_objects.using(using)
+                    .filter(
+                        **{f'{field_name}__in': objects},
+                        row_status=ROW_STATUS_ACTIVE,
+                    )
+                )
+            else:
+                blocking_queryset = (
+                    related_model.all_objects.using(using)
+                    .filter(
+                        **{f'{field_name}__in': objects},
+                    )
+                )
+
+            # Collect blocking instances.
+            for blocking_obj in blocking_queryset.iterator(chunk_size=DELETE_ITERATOR_CHUNK_SIZE):
+                blocking_objects.append(blocking_obj)
+
+        return deduplicate_objects(blocking_objects)
 
     def _check_protected_relations(
         self,
@@ -456,7 +578,8 @@ class SoftDeleteModel(models.Model):
         self,
         using: str | None = None,
         restore_children: bool = True,
-    ) -> tuple[int, dict[str, int]]:
+        dry_run: bool = False,
+    ) -> tuple[int, dict[str, int]] | SoftDeleteResult:
         """Restore a soft-deleted instance and optionally its CASCADE-related children.
 
         The algorithm uses breadth-first traversal to discover all related deleted
@@ -471,10 +594,13 @@ class SoftDeleteModel(models.Model):
             restore_children: When True (default), recursively restore all
                 CASCADE-related deleted objects. When False, only restore this instance
                 and its parents (both via inheritance and ForeignKey).
+            dry_run: When True, perform a read-only preview without database
+                modifications. Returns SoftDeleteResult instead of tuple.
 
         Returns:
             tuple[int, dict[str, int]]: Total number of restored rows and a map
-            of model labels to the number of affected rows.
+            of model labels to the number of affected rows (when dry_run=False).
+            SoftDeleteResult: Detailed preview of the operation (when dry_run=True).
         """
         if using is None:
             using = router.db_for_write(self.__class__, instance=self)
@@ -495,14 +621,28 @@ class SoftDeleteModel(models.Model):
                 model_label,
                 self.pk,
             )
+            if dry_run:
+                return SoftDeleteResult(
+                    affected_objects=tuple(),
+                    blocked_objects=tuple(),
+                    would_succeed=True,
+                    total_count=0,
+                    model_counts={},
+                )
             return 0, {}
 
+        # Collect affected objects for dry_run mode.
+        affected_refs: list[SoftDeleteRef] = []
         restored_counter = 0
         restored_models: dict[str, int] = {}
 
-        with transaction.atomic(using=using):
-            # Lock the root object to prevent concurrent modifications.
-            type(self).all_objects.using(using).filter(pk=self.pk).select_for_update(nowait=False).first()
+        # Define transaction context - use atomic only when not in dry_run.
+        transaction_context = transaction.atomic(using=using) if not dry_run else _no_op_context()
+
+        with transaction_context:
+            # Lock the root object to prevent concurrent modifications (only in real mode).
+            if not dry_run:
+                type(self).all_objects.using(using).filter(pk=self.pk).select_for_update(nowait=False).first()
 
             # Track model -> primary key set for every object to restore.
             to_restore: dict[type[models.Model], set[Any]] = defaultdict(set)
@@ -591,7 +731,43 @@ class SoftDeleteModel(models.Model):
 
                 current_level = next_level
 
-            # Check MTI parent status BEFORE updates.
+            # In dry_run mode, collect affected object references before updates.
+            if dry_run:
+                for model, pks in to_restore.items():
+                    if not pks:
+                        continue
+
+                    # Fetch actual deleted instances to create refs.
+                    instances = (
+                        model.all_objects.using(using)
+                        .filter(pk__in=pks, row_status=ROW_STATUS_DELETE)
+                    )
+                    for instance in instances.iterator(chunk_size=DELETE_ITERATOR_CHUNK_SIZE):
+                        affected_refs.append(SoftDeleteRef.from_instance(instance))
+
+                # Also include MTI parents in affected list for dry_run.
+                for parent_model, parent_pks in implicit_mti_restores.items():
+                    if not parent_pks:
+                        continue
+
+                    # Fetch actual deleted parent instances.
+                    parent_instances = (
+                        parent_model.all_objects.using(using)
+                        .filter(pk__in=parent_pks, row_status=ROW_STATUS_DELETE)
+                    )
+                    for instance in parent_instances.iterator(chunk_size=DELETE_ITERATOR_CHUNK_SIZE):
+                        # Check if not already in affected_refs (avoid duplicates).
+                        ref = SoftDeleteRef.from_instance(instance)
+                        if ref not in affected_refs:
+                            affected_refs.append(ref)
+
+                return SoftDeleteResult(
+                    affected_objects=tuple(affected_refs),
+                    blocked_objects=tuple(),  # Restore never has blocking objects.
+                    would_succeed=True,  # Restore always succeeds.
+                )
+
+            # Check MTI parent status BEFORE updates (real mode only).
             mti_parent_deleted_counts: dict[str, int] = {}
             for parent_model, parent_pks in implicit_mti_restores.items():
                 if not parent_pks:
@@ -608,7 +784,7 @@ class SoftDeleteModel(models.Model):
                     parent_label = f'{parent_model._meta.app_label}.{parent_model._meta.object_name}'
                     mti_parent_deleted_counts[parent_label] = deleted_count
 
-            # Apply bulk updates grouped by model once traversal ends.
+            # Apply bulk updates grouped by model once traversal ends (real mode only).
             for model, pks in to_restore.items():
                 if not pks:
                     continue

@@ -28,13 +28,16 @@ from .constants import (
     ROW_STATUS_UPDATED,
     SOFTDELETE_LOGGER_NAME,
 )
+from .result import SoftDeleteRef, SoftDeleteResult
 
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 
 __all__ = [
     'SoftDeleteModel',
     'SoftDeleteManager',
     'SoftDeleteQuerySet',
+    'SoftDeleteRef',
+    'SoftDeleteResult',
     'ROW_STATUS_ACTIVE',
     'ROW_STATUS_UPDATED',
     'ROW_STATUS_DELETE',

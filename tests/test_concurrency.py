@@ -31,8 +31,8 @@ class TestConcurrencySafety:
         # First deletion should succeed
         deleted_count1, deleted_models1 = author.delete()
         assert deleted_count1 == 1
-        assert 'tests.Author' in deleted_models1
-        assert deleted_models1['tests.Author'] == 1
+        assert "tests.Author" in deleted_models1
+        assert deleted_models1["tests.Author"] == 1
 
         # Refresh to get updated status
         author.refresh_from_db()
@@ -101,8 +101,8 @@ class TestConcurrencySafety:
 
         # Should delete author + 5 books = 6 objects
         assert deleted_count == 6
-        assert deleted_models['tests.Author'] == 1
-        assert deleted_models['tests.Book'] == 5
+        assert deleted_models["tests.Author"] == 1
+        assert deleted_models["tests.Book"] == 5
 
         # Verify all objects are marked as deleted
         author.refresh_from_db()
@@ -145,4 +145,4 @@ class TestConcurrencySafety:
             book.refresh_from_db()
             all_deleted = all_deleted and (book.row_status == ROW_STATUS_DELETE)
 
-        assert all_deleted, 'All objects should be deleted together atomically'
+        assert all_deleted, "All objects should be deleted together atomically"

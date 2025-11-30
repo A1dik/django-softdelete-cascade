@@ -40,15 +40,15 @@ def format_blocking_info(blocking_objects: list[models.Model]) -> str:
         Description string suitable for ``ProtectedError`` or ``RestrictedError``.
     """
     if not blocking_objects:
-        return ''
+        return ""
 
     blocking_by_model: dict[str, int] = defaultdict(int)
     for obj in blocking_objects:
-        model_label = f'{obj._meta.app_label}.{obj._meta.object_name}'
+        model_label = f"{obj._meta.app_label}.{obj._meta.object_name}"
         blocking_by_model[model_label] += 1
 
     info_parts = []
     for model_label, count in blocking_by_model.items():
-        info_parts.append(f'{model_label}: {count}')
+        info_parts.append(f"{model_label}: {count}")
 
     return f'Blocking objects: {", ".join(info_parts)}'

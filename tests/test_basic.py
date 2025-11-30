@@ -26,8 +26,8 @@ class TestBasicSoftDelete:
 
         # One row is reported as deleted
         assert deleted_count == 1
-        assert 'tests.Author' in deleted_models
-        assert deleted_models['tests.Author'] == 1
+        assert "tests.Author" in deleted_models
+        assert deleted_models["tests.Author"] == 1
 
         # Status is updated to deleted
         author.refresh_from_db()
@@ -124,4 +124,4 @@ class TestBasicSoftDelete:
         # Only the author should be reported
         assert deleted_count == 1
         assert len(deleted_models) == 1
-        assert 'tests.Author' in deleted_models
+        assert "tests.Author" in deleted_models

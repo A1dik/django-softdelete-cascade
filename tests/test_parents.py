@@ -24,10 +24,10 @@ class TestMultiTableInheritance:
 
         # Both Restaurant and Place should be removed
         assert deleted_count == 2
-        assert 'tests.Restaurant' in deleted_models
-        assert 'tests.Place' in deleted_models
-        assert deleted_models['tests.Restaurant'] == 1
-        assert deleted_models['tests.Place'] == 1
+        assert "tests.Restaurant" in deleted_models
+        assert "tests.Place" in deleted_models
+        assert deleted_models["tests.Restaurant"] == 1
+        assert deleted_models["tests.Place"] == 1
 
         # Ensure both objects are marked as deleted
         restaurant.refresh_from_db()
@@ -49,9 +49,9 @@ class TestMultiTableInheritance:
 
         # Restaurant, Place, and both waiters should be removed
         assert deleted_count == 4
-        assert 'tests.Restaurant' in deleted_models
-        assert 'tests.Place' in deleted_models
-        assert 'tests.Waiter' in deleted_models
+        assert "tests.Restaurant" in deleted_models
+        assert "tests.Place" in deleted_models
+        assert "tests.Waiter" in deleted_models
 
         # Check all objects
         restaurant.refresh_from_db()
@@ -94,7 +94,7 @@ class TestMultiTableInheritance:
         deleted_count, deleted_models = restaurant.delete()
 
         assert deleted_count >= 1
-        assert 'tests.Restaurant' in deleted_models
+        assert "tests.Restaurant" in deleted_models
 
     def test_cascade_from_child_with_relations(self):
         """Cascade from a child model that owns related objects."""
@@ -109,10 +109,10 @@ class TestMultiTableInheritance:
 
         # Verify cascade
         assert deleted_count == 5  # Restaurant + Place + 3 Waiters
-        assert 'tests.Restaurant' in deleted_models
-        assert 'tests.Place' in deleted_models
-        assert 'tests.Waiter' in deleted_models
-        assert deleted_models['tests.Waiter'] == 3
+        assert "tests.Restaurant" in deleted_models
+        assert "tests.Place" in deleted_models
+        assert "tests.Waiter" in deleted_models
+        assert deleted_models["tests.Waiter"] == 3
 
     def test_parent_deletion_with_cascade_relations(self):
         """Delete a parent with cascade relations on the child level."""
@@ -156,4 +156,4 @@ class TestMultiTableInheritance:
         deleted_count, deleted_models = restaurant.delete()
 
         # Parent already deleted; only the restaurant should remain (or zero if it cascaded)
-        assert 'tests.Restaurant' in deleted_models or deleted_count == 0
+        assert "tests.Restaurant" in deleted_models or deleted_count == 0

@@ -25,7 +25,7 @@ class TestProtectConstraint:
 
         # Message should reference PROTECT constraint
         error_message = str(exc_info.value)
-        assert 'PROTECT' in error_message
+        assert "PROTECT" in error_message
 
         # Both rows remain active
         publisher.refresh_from_db()
@@ -67,7 +67,7 @@ class TestProtectConstraint:
         deleted_count, deleted_models = publisher.delete()
 
         assert deleted_count == 1
-        assert 'tests.Publisher' in deleted_models
+        assert "tests.Publisher" in deleted_models
 
         # Publisher is marked deleted
         publisher.refresh_from_db()
@@ -101,8 +101,8 @@ class TestProtectConstraint:
         error_message = str(exc_info.value)
 
         # Model label and guard type should appear
-        assert 'tests.Publisher' in error_message
-        assert 'PROTECT' in error_message
+        assert "tests.Publisher" in error_message
+        assert "PROTECT" in error_message
 
     def test_protect_with_mixed_active_and_deleted(self):
         """Mixed active/deleted children still block via PROTECT."""
@@ -133,7 +133,7 @@ class TestProtectConstraint:
         deleted_count, deleted_models = publisher.delete()
 
         assert deleted_count == 1
-        assert 'tests.Publisher' in deleted_models
+        assert "tests.Publisher" in deleted_models
 
         publisher.refresh_from_db()
         assert publisher.row_status == ROW_STATUS_DELETE
@@ -148,5 +148,5 @@ class TestProtectConstraint:
 
         # protected_objects should contain related rows
         exception = exc_info.value
-        assert hasattr(exception, 'protected_objects')
+        assert hasattr(exception, "protected_objects")
         assert len(exception.protected_objects) > 0

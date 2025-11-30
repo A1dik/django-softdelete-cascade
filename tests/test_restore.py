@@ -35,8 +35,8 @@ class TestBasicRestore:
 
         # Verify restoration.
         assert restored_count == 1
-        assert 'tests.Author' in restored_models
-        assert restored_models['tests.Author'] == 1
+        assert "tests.Author" in restored_models
+        assert restored_models["tests.Author"] == 1
 
         author.refresh_from_db()
         assert author.row_status == ROW_STATUS_ACTIVE
@@ -124,10 +124,10 @@ class TestCascadeRestore:
 
         # Verify restoration counts.
         assert restored_count == 3
-        assert 'tests.Author' in restored_models
-        assert 'tests.Book' in restored_models
-        assert restored_models['tests.Author'] == 1
-        assert restored_models['tests.Book'] == 2
+        assert "tests.Author" in restored_models
+        assert "tests.Book" in restored_models
+        assert restored_models["tests.Author"] == 1
+        assert restored_models["tests.Book"] == 2
 
         # Verify all objects are active.
         author.refresh_from_db()
@@ -165,9 +165,9 @@ class TestCascadeRestore:
 
         # Verify restoration counts.
         assert restored_count == 4
-        assert restored_models['tests.Author'] == 1
-        assert restored_models['tests.Book'] == 1
-        assert restored_models['tests.Chapter'] == 2
+        assert restored_models["tests.Author"] == 1
+        assert restored_models["tests.Book"] == 1
+        assert restored_models["tests.Chapter"] == 2
 
         # Verify all objects are active.
         author.refresh_from_db()
@@ -203,10 +203,10 @@ class TestCascadeRestore:
 
         # Verify restoration counts.
         assert restored_count == 6
-        assert restored_models['tests.Author'] == 1
-        assert restored_models['tests.Book'] == 1
-        assert restored_models['tests.Chapter'] == 1
-        assert restored_models['tests.Page'] == 3
+        assert restored_models["tests.Author"] == 1
+        assert restored_models["tests.Book"] == 1
+        assert restored_models["tests.Chapter"] == 1
+        assert restored_models["tests.Page"] == 3
 
         # Verify all objects are active.
         for obj in [author, book, chapter, page1, page2, page3]:
@@ -242,9 +242,9 @@ class TestRestoreWithoutChildren:
 
         # Only author should be restored.
         assert restored_count == 1
-        assert 'tests.Author' in restored_models
-        assert 'tests.Book' not in restored_models
-        assert restored_models['tests.Author'] == 1
+        assert "tests.Author" in restored_models
+        assert "tests.Book" not in restored_models
+        assert restored_models["tests.Author"] == 1
 
         # Verify author is active, books remain deleted.
         author.refresh_from_db()
@@ -277,9 +277,9 @@ class TestRestoreWithoutChildren:
         # Only book and its parent (author) should be restored.
         # Parent models are always restored due to multi-table inheritance logic.
         assert restored_count == 2
-        assert 'tests.Book' in restored_models
-        assert 'tests.Author' in restored_models
-        assert 'tests.Chapter' not in restored_models
+        assert "tests.Book" in restored_models
+        assert "tests.Author" in restored_models
+        assert "tests.Chapter" not in restored_models
 
         # Verify book and author are active, chapters remain deleted.
         author.refresh_from_db()
@@ -321,7 +321,7 @@ class TestPartialRestore:
 
         # Only book1 should be restored.
         assert restored_count == 1
-        assert restored_models['tests.Book'] == 1
+        assert restored_models["tests.Book"] == 1
 
         # Verify all are now active.
         author.refresh_from_db()
@@ -385,11 +385,13 @@ class TestQuerySetRestore:
 
         # Restore all deleted authors via queryset.
         deleted_authors = Author.all_objects.deleted()
-        restored_count, restored_models = deleted_authors.restore(restore_children=False)
+        restored_count, restored_models = deleted_authors.restore(
+            restore_children=False
+        )
 
         # Verify restoration.
         assert restored_count == 3
-        assert restored_models['tests.Author'] == 3
+        assert restored_models["tests.Author"] == 3
 
         # All should now be visible via default manager.
         assert Author.objects.count() == 3
@@ -418,8 +420,8 @@ class TestQuerySetRestore:
 
         # Verify restoration.
         assert restored_count == 5  # 2 authors + 3 books
-        assert restored_models['tests.Author'] == 2
-        assert restored_models['tests.Book'] == 3
+        assert restored_models["tests.Author"] == 2
+        assert restored_models["tests.Book"] == 3
 
         # All should be visible.
         assert Author.objects.count() == 2
@@ -440,12 +442,14 @@ class TestQuerySetRestore:
 
         # Restore authors without children.
         deleted_authors = Author.all_objects.deleted()
-        restored_count, restored_models = deleted_authors.restore(restore_children=False)
+        restored_count, restored_models = deleted_authors.restore(
+            restore_children=False
+        )
 
         # Only authors should be restored.
         assert restored_count == 2
-        assert 'tests.Author' in restored_models
-        assert 'tests.Book' not in restored_models
+        assert "tests.Author" in restored_models
+        assert "tests.Book" not in restored_models
 
         # Authors visible, books still deleted.
         assert Author.objects.count() == 2
@@ -476,8 +480,8 @@ class TestMultiTableInheritanceRestore:
 
         # Both should be restored.
         assert restored_count == 2
-        assert 'tests.Restaurant' in restored_models
-        assert 'tests.Place' in restored_models
+        assert "tests.Restaurant" in restored_models
+        assert "tests.Place" in restored_models
 
         # Verify both are active.
         restaurant.refresh_from_db()
@@ -511,9 +515,9 @@ class TestMultiTableInheritanceRestore:
 
         # All should be restored (restaurant + place + 2 waiters).
         assert restored_count == 4
-        assert restored_models['tests.Restaurant'] == 1
-        assert restored_models['tests.Place'] == 1
-        assert restored_models['tests.Waiter'] == 2
+        assert restored_models["tests.Restaurant"] == 1
+        assert restored_models["tests.Place"] == 1
+        assert restored_models["tests.Waiter"] == 2
 
         # Verify all are active.
         restaurant.refresh_from_db()
@@ -572,8 +576,8 @@ class TestRestoreIdempotency:
         # Should restore author and book2 (book1 already active).
         # Due to idempotency, book1 won't be counted but will remain active.
         assert restored_count == 2
-        assert restored_models['tests.Author'] == 1
-        assert restored_models['tests.Book'] == 1
+        assert restored_models["tests.Author"] == 1
+        assert restored_models["tests.Book"] == 1
 
         # All should be active.
         author.refresh_from_db()

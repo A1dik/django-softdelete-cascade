@@ -57,7 +57,7 @@ class SoftDeleteRef:
         Returns:
             Dotted model label suitable for Django admin and error messages.
         """
-        return f'{self.app_label}.{self.model_name}'
+        return f"{self.app_label}.{self.model_name}"
 
 
 @dataclass(frozen=True)
@@ -92,13 +92,13 @@ class SoftDeleteResult:
         """
         # Frozen dataclass requires object.__setattr__ for validation adjustments.
         if self.total_count == 0 and self.affected_objects:
-            object.__setattr__(self, 'total_count', len(self.affected_objects))
+            object.__setattr__(self, "total_count", len(self.affected_objects))
 
         if not self.model_counts and self.affected_objects:
             counts: dict[str, int] = {}
             for ref in self.affected_objects:
                 counts[ref.model_label] = counts.get(ref.model_label, 0) + 1
-            object.__setattr__(self, 'model_counts', counts)
+            object.__setattr__(self, "model_counts", counts)
 
     @property
     def affected_count(self) -> int:

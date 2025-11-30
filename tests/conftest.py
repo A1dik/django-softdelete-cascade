@@ -18,17 +18,17 @@ def pytest_configure():
         settings.configure(
             DEBUG=True,
             DATABASES={
-                'default': {
-                    'ENGINE': 'django.db.backends.sqlite3',
-                    'NAME': ':memory:',
+                "default": {
+                    "ENGINE": "django.db.backends.sqlite3",
+                    "NAME": ":memory:",
                 }
             },
             INSTALLED_APPS=[
-                'django.contrib.contenttypes',
-                'django.contrib.auth',
-                'tests',
+                "django.contrib.contenttypes",
+                "django.contrib.auth",
+                "tests",
             ],
-            SECRET_KEY='test-secret-key-for-django-softdelete-cascade',
+            SECRET_KEY="test-secret-key-for-django-softdelete-cascade",
             USE_TZ=True,
         )
         django.setup()
@@ -36,4 +36,4 @@ def pytest_configure():
         # Apply migrations for the in-memory database
         from django.core.management import call_command
 
-        call_command('migrate', '--run-syncdb', verbosity=0)
+        call_command("migrate", "--run-syncdb", verbosity=0)

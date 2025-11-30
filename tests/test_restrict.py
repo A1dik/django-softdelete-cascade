@@ -25,7 +25,7 @@ class TestRestrictConstraint:
 
         # Message should reference RESTRICT
         error_message = str(exc_info.value)
-        assert 'RESTRICT' in error_message
+        assert "RESTRICT" in error_message
 
         # Both rows remain active
         category.refresh_from_db()
@@ -67,7 +67,7 @@ class TestRestrictConstraint:
         deleted_count, deleted_models = category.delete()
 
         assert deleted_count == 1
-        assert 'tests.Category' in deleted_models
+        assert "tests.Category" in deleted_models
 
         category.refresh_from_db()
         assert category.row_status == ROW_STATUS_DELETE
@@ -100,8 +100,8 @@ class TestRestrictConstraint:
         error_message = str(exc_info.value)
 
         # Model label and guard type should appear
-        assert 'tests.Category' in error_message
-        assert 'RESTRICT' in error_message
+        assert "tests.Category" in error_message
+        assert "RESTRICT" in error_message
 
     def test_restrict_with_mixed_active_and_deleted(self):
         """Mixed active/deleted children still block via RESTRICT."""
@@ -132,7 +132,7 @@ class TestRestrictConstraint:
         deleted_count, deleted_models = category.delete()
 
         assert deleted_count == 1
-        assert 'tests.Category' in deleted_models
+        assert "tests.Category" in deleted_models
 
         category.refresh_from_db()
         assert category.row_status == ROW_STATUS_DELETE
@@ -147,7 +147,7 @@ class TestRestrictConstraint:
 
         # restricted_objects should contain related rows
         exception = exc_info.value
-        assert hasattr(exception, 'restricted_objects')
+        assert hasattr(exception, "restricted_objects")
         assert len(exception.restricted_objects) > 0
 
     def test_difference_between_protect_and_restrict(self):
@@ -164,7 +164,7 @@ class TestRestrictConstraint:
         try:
             category.delete()
         except Exception as e:
-            assert type(e).__name__ == 'RestrictedError'
+            assert type(e).__name__ == "RestrictedError"
 
     def test_restrict_with_multiple_references_same_object(self):
         """Multiple references to the same parent still block deletion."""

@@ -26,7 +26,7 @@ class AuthorFactory(DjangoModelFactory):
     class Meta:
         model = Author
 
-    name = factory.Sequence(lambda n: f'Author {n}')
+    name = factory.Sequence(lambda n: f"Author {n}")
     row_status = ROW_STATUS_ACTIVE
 
 
@@ -36,7 +36,7 @@ class BookFactory(DjangoModelFactory):
     class Meta:
         model = Book
 
-    title = factory.Sequence(lambda n: f'Book {n}')
+    title = factory.Sequence(lambda n: f"Book {n}")
     author = factory.SubFactory(AuthorFactory)
     row_status = ROW_STATUS_ACTIVE
 
@@ -47,7 +47,7 @@ class ChapterFactory(DjangoModelFactory):
     class Meta:
         model = Chapter
 
-    title = factory.Sequence(lambda n: f'Chapter {n}')
+    title = factory.Sequence(lambda n: f"Chapter {n}")
     book = factory.SubFactory(BookFactory)
     row_status = ROW_STATUS_ACTIVE
 
@@ -69,7 +69,7 @@ class PublisherFactory(DjangoModelFactory):
     class Meta:
         model = Publisher
 
-    name = factory.Sequence(lambda n: f'Publisher {n}')
+    name = factory.Sequence(lambda n: f"Publisher {n}")
     row_status = ROW_STATUS_ACTIVE
 
 
@@ -79,7 +79,7 @@ class ProtectedBookFactory(DjangoModelFactory):
     class Meta:
         model = ProtectedBook
 
-    title = factory.Sequence(lambda n: f'Protected Book {n}')
+    title = factory.Sequence(lambda n: f"Protected Book {n}")
     publisher = factory.SubFactory(PublisherFactory)
     row_status = ROW_STATUS_ACTIVE
 
@@ -90,7 +90,7 @@ class CategoryFactory(DjangoModelFactory):
     class Meta:
         model = Category
 
-    name = factory.Sequence(lambda n: f'Category {n}')
+    name = factory.Sequence(lambda n: f"Category {n}")
     row_status = ROW_STATUS_ACTIVE
 
 
@@ -100,7 +100,7 @@ class RestrictedBookFactory(DjangoModelFactory):
     class Meta:
         model = RestrictedBook
 
-    title = factory.Sequence(lambda n: f'Restricted Book {n}')
+    title = factory.Sequence(lambda n: f"Restricted Book {n}")
     category = factory.SubFactory(CategoryFactory)
     row_status = ROW_STATUS_ACTIVE
 
@@ -111,8 +111,8 @@ class PlaceFactory(DjangoModelFactory):
     class Meta:
         model = Place
 
-    name = factory.Sequence(lambda n: f'Place {n}')
-    address = factory.Sequence(lambda n: f'{n} Main Street')
+    name = factory.Sequence(lambda n: f"Place {n}")
+    address = factory.Sequence(lambda n: f"{n} Main Street")
     row_status = ROW_STATUS_ACTIVE
 
 
@@ -122,10 +122,10 @@ class RestaurantFactory(DjangoModelFactory):
     class Meta:
         model = Restaurant
 
-    name = factory.Sequence(lambda n: f'Restaurant {n}')
-    address = factory.Sequence(lambda n: f'{n} Restaurant Avenue')
-    cuisine = factory.Iterator(['Italian', 'Japanese', 'French', 'Chinese'])
-    rating = factory.Faker('random_int', min=1, max=5)
+    name = factory.Sequence(lambda n: f"Restaurant {n}")
+    address = factory.Sequence(lambda n: f"{n} Restaurant Avenue")
+    cuisine = factory.Iterator(["Italian", "Japanese", "French", "Chinese"])
+    rating = factory.Faker("random_int", min=1, max=5)
     row_status = ROW_STATUS_ACTIVE
 
 
@@ -135,6 +135,6 @@ class WaiterFactory(DjangoModelFactory):
     class Meta:
         model = Waiter
 
-    name = factory.Sequence(lambda n: f'Waiter {n}')
+    name = factory.Sequence(lambda n: f"Waiter {n}")
     restaurant = factory.SubFactory(RestaurantFactory)
     row_status = ROW_STATUS_ACTIVE

@@ -11,7 +11,7 @@ class Author(SoftDeleteModel):
     name = models.CharField(max_length=255)
 
     class Meta:
-        app_label = 'tests'
+        app_label = "tests"
 
     def __str__(self):
         return self.name
@@ -21,12 +21,10 @@ class Book(SoftDeleteModel):
     """Book model linked to an author."""
 
     title = models.CharField(max_length=255)
-    author = models.ForeignKey(
-        Author, on_delete=models.CASCADE, related_name='books'
-    )
+    author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name="books")
 
     class Meta:
-        app_label = 'tests'
+        app_label = "tests"
 
     def __str__(self):
         return self.title
@@ -36,12 +34,10 @@ class Chapter(SoftDeleteModel):
     """Chapter model linked to a book."""
 
     title = models.CharField(max_length=255)
-    book = models.ForeignKey(
-        Book, on_delete=models.CASCADE, related_name='chapters'
-    )
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="chapters")
 
     class Meta:
-        app_label = 'tests'
+        app_label = "tests"
 
     def __str__(self):
         return self.title
@@ -51,15 +47,13 @@ class Page(SoftDeleteModel):
     """Page model linked to a chapter."""
 
     number = models.IntegerField()
-    chapter = models.ForeignKey(
-        Chapter, on_delete=models.CASCADE, related_name='pages'
-    )
+    chapter = models.ForeignKey(Chapter, on_delete=models.CASCADE, related_name="pages")
 
     class Meta:
-        app_label = 'tests'
+        app_label = "tests"
 
     def __str__(self):
-        return f'Page {self.number}'
+        return f"Page {self.number}"
 
 
 class Publisher(SoftDeleteModel):
@@ -68,7 +62,7 @@ class Publisher(SoftDeleteModel):
     name = models.CharField(max_length=255)
 
     class Meta:
-        app_label = 'tests'
+        app_label = "tests"
 
     def __str__(self):
         return self.name
@@ -79,11 +73,11 @@ class ProtectedBook(SoftDeleteModel):
 
     title = models.CharField(max_length=255)
     publisher = models.ForeignKey(
-        Publisher, on_delete=models.PROTECT, related_name='protected_books'
+        Publisher, on_delete=models.PROTECT, related_name="protected_books"
     )
 
     class Meta:
-        app_label = 'tests'
+        app_label = "tests"
 
     def __str__(self):
         return self.title
@@ -95,7 +89,7 @@ class Category(SoftDeleteModel):
     name = models.CharField(max_length=255)
 
     class Meta:
-        app_label = 'tests'
+        app_label = "tests"
 
     def __str__(self):
         return self.name
@@ -106,11 +100,11 @@ class RestrictedBook(SoftDeleteModel):
 
     title = models.CharField(max_length=255)
     category = models.ForeignKey(
-        Category, on_delete=models.RESTRICT, related_name='restricted_books'
+        Category, on_delete=models.RESTRICT, related_name="restricted_books"
     )
 
     class Meta:
-        app_label = 'tests'
+        app_label = "tests"
 
     def __str__(self):
         return self.title
@@ -126,7 +120,7 @@ class Place(SoftDeleteModel):
     address = models.CharField(max_length=255)
 
     class Meta:
-        app_label = 'tests'
+        app_label = "tests"
 
     def __str__(self):
         return self.name
@@ -139,10 +133,10 @@ class Restaurant(Place):
     rating = models.IntegerField(default=0)
 
     class Meta:
-        app_label = 'tests'
+        app_label = "tests"
 
     def __str__(self):
-        return f'{self.name} - {self.cuisine}'
+        return f"{self.name} - {self.cuisine}"
 
 
 class Waiter(SoftDeleteModel):
@@ -150,11 +144,11 @@ class Waiter(SoftDeleteModel):
 
     name = models.CharField(max_length=255)
     restaurant = models.ForeignKey(
-        Restaurant, on_delete=models.CASCADE, related_name='waiters'
+        Restaurant, on_delete=models.CASCADE, related_name="waiters"
     )
 
     class Meta:
-        app_label = 'tests'
+        app_label = "tests"
 
     def __str__(self):
         return self.name

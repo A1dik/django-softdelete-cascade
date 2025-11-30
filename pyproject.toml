@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-softdelete-cascade"
-version = "0.1.0"
-description = "Django library for soft delete with cascade support"
+version = "1.0.0"
+description = "Production-ready Django library for soft delete with cascade support, admin integration, and comprehensive testing"
 readme = "README.md"
 authors = [
     {name = "Django SoftDelete Cascade Contributors", email = "noreply@example.com"}
 ]
 license = {text = "MIT"}
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
@@ -55,3 +55,15 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 testpaths = ["tests"]
 addopts = "-v"
+
+[tool.poetry.group.dev.dependencies]
+pytest-cov = "^7.0.0"
+coverage = "^7.12.0"
+factory-boy = "^3.3.3"
+pytest-django = "^4.11.1"
+faker = "^38.2.0"
+black = "^25.11.0"
+flake8 = "^7.3.0"
+mypy = "^1.19.0"
+django-stubs = "^5.2.7"
+

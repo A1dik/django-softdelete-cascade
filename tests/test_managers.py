@@ -127,15 +127,6 @@ class TestSoftDeleteQuerySet:
         assert Author.objects.count() == 0
         assert Book.objects.count() == 0
 
-    def test_restore_raises_not_implemented(self):
-        """Test that .restore() raises NotImplementedError (stub for Stage 3)."""
-        author = Author.objects.create(name='Author')
-        author.delete()
-
-        deleted_qs = Author.all_objects.deleted()
-        with pytest.raises(NotImplementedError, match='restore.*Stage 3'):
-            deleted_qs.restore()
-
 
 @pytest.mark.django_db
 class TestManagerWithCascadeRelations:
